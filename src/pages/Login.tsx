@@ -55,6 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       });
 
       if (result) {
+        console.log('Results', result);
         onLogin();
       } else {
         setError("Failed to connect. Check credentials.");

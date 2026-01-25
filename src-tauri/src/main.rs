@@ -2,12 +2,21 @@
 
 use std::net::UdpSocket;
 use std::time::Duration;
+use reqwest::Client;
+use serde::Deserialize;
+
 
 use tauri::{AppHandle, Manager, WindowEvent, Emitter};
 use tauri::tray::TrayIconBuilder;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::image::Image;
 use tauri_plugin_autostart::{init as autostart_init, ManagerExt, MacosLauncher};
+
+#[derive(Deserialize)]
+struct ApiResponse {
+    status: String,
+    message: String,
+}
 
 // -------------------- Commands --------------------
 
@@ -19,9 +28,34 @@ fn get_local_ip() -> Option<String> {
 }
 
 #[tauri::command]
-async fn connect_device(app: AppHandle, ip: String) -> Result<(), String> {
-    app.emit("log", format!("Connected to {}", ip) as String)
-        .map_err(|e: tauri::Error| e.to_string())
+async fn connect_device(app: AppHandle, ip: String) -> Result<String, String> {
+    // Emit log to frontend
+    app.emit("log", format!("Connecting to {}", ip))
+        .map_err(|e| e.to_string())?;
+
+    // Corrected API endpoint
+    let api_url = format!("https://jsonplaceholder.typicode.com/{}", ip);
+
+    // Make async request
+    let client = Client::new();
+    let response = client
+        .get(&api_url)
+        .header("Authorization", "Bearer YOUR_API_KEY")
+        .send()
+        .await
+        .map_err(|e: reqwest::Error| e.to_string())?;
+
+    // Parse JSON response
+    let data: ApiResponse = response
+        .json()
+        .await
+        .map_err(|e: reqwest::Error| e.to_string())?;
+
+    // Emit log
+    app.emit("log", format!("Device status: {}", data.status))
+        .map_err(|e| e.to_string())?;
+
+    Ok(format!("Connected: {}", data.message))
 }
 
 #[tauri::command]
