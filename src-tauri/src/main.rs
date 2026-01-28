@@ -4,6 +4,7 @@ use std::net::UdpSocket;
 use std::time::Duration;
 use reqwest::Client;
 use serde::Deserialize;
+use curl::easy::{Easy, Auth};
 
 
 use tauri::{AppHandle, Manager, WindowEvent, Emitter};
@@ -28,35 +29,49 @@ fn get_local_ip() -> Option<String> {
 }
 
 #[tauri::command]
-async fn connect_device(app: AppHandle, ip: String) -> Result<String, String> {
-    // Emit log to frontend
-    app.emit("log", format!("Connecting to {}", ip))
+fn connect_device(
+    app: AppHandle,
+    ip: String,
+    username: String,
+    password: String,
+) -> Result<String, String> {
+
+    app.emit("log", format!("Connecting to device {}", ip))
         .map_err(|e| e.to_string())?;
 
-    // Corrected API endpoint
-    let api_url = format!("https://jsonplaceholder.typicode.com/{}", ip);
+    let url = format!("http://{}/ISAPI/System/deviceInfo", ip);
 
-    // Make async request
-    let client = Client::new();
-    let response = client
-        .get(&api_url)
-        .header("Authorization", "Bearer YOUR_API_KEY")
-        .send()
-        .await
-        .map_err(|e: reqwest::Error| e.to_string())?;
+    let mut easy = Easy::new();
+    easy.url(&url).map_err(|e| e.to_string())?;
+    easy.username(&username).map_err(|e| e.to_string())?;
+    easy.password(&password).map_err(|e| e.to_string())?;
 
-    // Parse JSON response
-    let data: ApiResponse = response
-        .json()
-        .await
-        .map_err(|e: reqwest::Error| e.to_string())?;
-
-    // Emit log
-    app.emit("log", format!("Device status: {}", data.status))
+    // ✅ THIS is the correct Digest auth usage
+    easy.http_auth(Auth::new().digest(true))
         .map_err(|e| e.to_string())?;
 
-    Ok(format!("Connected: {}", data.message))
+    let mut response = Vec::new();
+    {
+        let mut transfer = easy.transfer();
+        transfer
+            .write_function(|data| {
+                response.extend_from_slice(data);
+                Ok(data.len())
+            })
+            .map_err(|e| e.to_string())?;
+
+        transfer.perform().map_err(|e| e.to_string())?;
+    }
+
+    let body = String::from_utf8(response)
+        .map_err(|_| "Invalid UTF-8 response".to_string())?;
+
+    app.emit("log", "Device connected successfully")
+        .map_err(|e| e.to_string())?;
+
+    Ok(body) // 👈 Hikvision XML
 }
+
 
 #[tauri::command]
 async fn manual_sync(app: AppHandle) -> Result<(), String> {

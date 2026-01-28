@@ -48,6 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError("");
 
     try {
+      console.log(form);
       const result: boolean = await invoke("connect_device", {
         ip: form.ip,
         username: form.username,
@@ -76,7 +77,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           type="text"
           name="ip" 
           placeholder="Network IP"
-          contentEditable={ipFetched ? false : true}
+          // contentEditable={ipFetched ? false : true}
           value={form.ip}
           onChange={handleChange}
           className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
