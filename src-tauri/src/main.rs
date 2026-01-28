@@ -4,6 +4,8 @@ use std::net::UdpSocket;
 use std::time::Duration;
 use reqwest::Client;
 use serde::Deserialize;
+use quick_xml::de::from_str;
+use serde_json::Value;
 use curl::easy::{Easy, Auth};
 
 
@@ -34,7 +36,7 @@ fn connect_device(
     ip: String,
     username: String,
     password: String,
-) -> Result<String, String> {
+) -> Result<Value, String> {
 
     app.emit("log", format!("Connecting to device {}", ip))
         .map_err(|e| e.to_string())?;
@@ -45,8 +47,6 @@ fn connect_device(
     easy.url(&url).map_err(|e| e.to_string())?;
     easy.username(&username).map_err(|e| e.to_string())?;
     easy.password(&password).map_err(|e| e.to_string())?;
-
-    // ✅ THIS is the correct Digest auth usage
     easy.http_auth(Auth::new().digest(true))
         .map_err(|e| e.to_string())?;
 
@@ -63,13 +63,25 @@ fn connect_device(
         transfer.perform().map_err(|e| e.to_string())?;
     }
 
-    let body = String::from_utf8(response)
+    let xml = String::from_utf8(response)
         .map_err(|_| "Invalid UTF-8 response".to_string())?;
+
+    // 🚨 Hikvision auth / lock detection
+    if xml.contains("<statusValue>401</statusValue>") {
+        app.emit("log", "Unauthorized or user locked")
+            .map_err(|e| e.to_string())?;
+
+        return Err("Unauthorized: user locked or invalid credentials".into());
+    }
+
+    // ✅ XML → JSON
+    let json: Value = from_str(&xml)
+        .map_err(|e| format!("XML parse failed: {}", e))?;
 
     app.emit("log", "Device connected successfully")
         .map_err(|e| e.to_string())?;
 
-    Ok(body) // 👈 Hikvision XML
+    Ok(json)
 }
 
 
