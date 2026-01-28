@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { invoke } from "@tauri-apps/api/core"; // ✅ use tauri instead of core
 
 interface LoginProps {
@@ -12,25 +12,24 @@ interface FormState {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [form, setForm] = useState<FormState>({ ip: "", username: "", password: "" });
-  const [ipFetched, setIpFetched] = useState(false);
+  const [form, setForm] = useState<FormState>({ ip: "192.168.8.153", username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Auto fetch local IP
-  useEffect(() => {
-    const fetchIP = async () => {
-      try {
-        const localIp: string = await invoke("get_local_ip");
-        setForm(prev => ({ ...prev, ip: localIp }));
-        setIpFetched(true);
-      } catch {
-        console.warn("Failed to get local IP");
-        setIpFetched(false);
-      }
-    };
-    fetchIP();
-  }, []);
+  // useEffect(() => {
+  //   const fetchIP = async () => {
+  //     try {
+  //       const localIp: string = await invoke("get_local_ip");
+  //       setForm(prev => ({ ...prev, ip: localIp }));
+  //       setIpFetched(true);
+  //     } catch {
+  //       console.warn("Failed to get local IP");
+  //       setIpFetched(false);
+  //     }
+  //   };
+  //   fetchIP();
+  // }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
