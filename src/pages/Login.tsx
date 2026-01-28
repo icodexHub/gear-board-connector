@@ -12,7 +12,11 @@ interface FormState {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [form, setForm] = useState<FormState>({ ip: "", username: "", password: "" });
+  const [form, setForm] = useState<FormState>({
+    ip: "192.168.8.153",
+    username: "",
+    password: "",
+  });
   const [ipFetched, setIpFetched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,8 +25,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   useEffect(() => {
     const fetchIP = async () => {
       try {
-        const localIp: string = await invoke("get_local_ip");
-        setForm(prev => ({ ...prev, ip: localIp }));
+        setForm((prev) => ({ ...prev }));
         setIpFetched(true);
       } catch {
         console.warn("Failed to get local IP");
@@ -34,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
     setError(""); // clear error on input
   };
 
@@ -55,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       });
 
       if (result) {
-        console.log('Results', result);
+        console.log("Results", result);
         onLogin();
       } else {
         setError("Failed to connect. Check credentials.");
@@ -74,7 +77,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <input
           type="text"
-          name="ip" 
+          name="ip"
           placeholder="Network IP"
           contentEditable={ipFetched ? false : true}
           value={form.ip}
@@ -84,7 +87,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <input
           type="text"
-          name="username" 
+          name="username"
           placeholder="Username"
           value={form.username}
           onChange={handleChange}
@@ -93,7 +96,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <input
           type="password"
-          name="password" 
+          name="password"
           placeholder="Password"
           value={form.password}
           onChange={handleChange}
