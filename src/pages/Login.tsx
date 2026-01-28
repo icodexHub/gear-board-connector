@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import { invoke } from "@tauri-apps/api/core"; // ✅ use tauri instead of core
+import { XMLParser } from "fast-xml-parser";
 
 interface LoginProps {
   onLogin: () => void;
@@ -11,25 +12,15 @@ interface FormState {
   password: string;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [form, setForm] = useState<FormState>({ ip: "192.168.8.153", username: "", password: "" });
+const Login: React.FC<LoginProps> = () => {
+  const [form, setForm] = useState<FormState>({
+    ip: "192.168.8.153",
+    username: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Auto fetch local IP
-  // useEffect(() => {
-  //   const fetchIP = async () => {
-  //     try {
-  //       const localIp: string = await invoke("get_local_ip");
-  //       setForm(prev => ({ ...prev, ip: localIp }));
-  //       setIpFetched(true);
-  //     } catch {
-  //       console.warn("Failed to get local IP");
-  //       setIpFetched(false);
-  //     }
-  //   };
-  //   fetchIP();
-  // }, []);
+  const [data, setData] = useState<string>("");
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -47,8 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError("");
 
     try {
-      console.log(form);
-      const result: boolean = await invoke("connect_device", {
+      const result: string = await invoke("connect_device", {
         ip: form.ip,
         username: form.username,
         password: form.password,
@@ -56,7 +46,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       if (result) {
         console.log("Results", result);
-        onLogin();
+
+        const parser = new XMLParser({
+          ignoreAttributes: false,
+          attributeNamePrefix: "@_",
+        });
+
+        const json = parser.parse(result);
+        console.log(json.DeviceInfo.model);
+
+        setData(json.DeviceInfo.model);
+        // onLogin();
       } else {
         setError("Failed to connect. Check credentials.");
       }
@@ -99,6 +99,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           onChange={handleChange}
           className="w-full mb-6 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+
+        {data && (
+          <p className="text-green-500 text-sm mb-4 text-center">
+            Connected Successfully!
+            {data}
+          </p>
+        )}
 
         <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
 
