@@ -1,11 +1,37 @@
-import { useAuthStore } from "./store/Auth";
-import Login from "./pages/Login";
+import { useState } from "react";
 import Dashboard from "./pages/Dashboard";
+import Login, { type Credentials, type DeviceInfo } from "./pages/Login";
 
-export default function App() {
-  const loggedIn = useAuthStore(s => s.loggedIn);
-  const login = useAuthStore(s => s.connect);
-  const logout = useAuthStore(s => s.disconnect);
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
+  const [credentials, setCredentials] = useState<Credentials | null>(null);
 
-  return loggedIn ? <Dashboard onLogout={logout} /> : <Login onLogin={login} />;
+  const handleLogin = (info: DeviceInfo, creds: Credentials) => {
+    setDeviceInfo(info);
+    setCredentials(creds);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setDeviceInfo(null);
+    setCredentials(null);
+    setIsLoggedIn(false);
+  };
+
+  return (
+    <>
+      {isLoggedIn && deviceInfo && credentials ? (
+        <Dashboard
+          onLogout={handleLogout}
+          deviceInfo={deviceInfo}
+          credentials={credentials}
+        />
+      ) : (
+        <Login onLogin={handleLogin} />
+      )}
+    </>
+  );
 }
+
+export default App;

@@ -1,8 +1,28 @@
 import { useState, type ChangeEvent } from "react";
-import { invoke } from "@tauri-apps/api/core"; // ✅ use tauri instead of core
+import { invoke } from "@tauri-apps/api/core";
+
+export interface DeviceInfo {
+  deviceName: string;
+  deviceID: string;
+  model: string;
+  serialNumber: string;
+  macAddress: string;
+  firmwareVersion: string;
+  firmwareReleasedDate: string;
+  deviceType: string;
+  subDeviceType: string;
+  manufacturer: string;
+  productionDate: string;
+}
+
+export interface Credentials {
+  ip: string;
+  username: string;
+  password: string;
+}
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (deviceInfo: DeviceInfo, credentials: Credentials) => void;
 }
 
 interface FormState {
@@ -12,29 +32,18 @@ interface FormState {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [form, setForm] = useState<FormState>({ ip: "192.168.8.153", username: "", password: "" });
+  const [form, setForm] = useState<FormState>({
+    ip: "192.168.8.153",
+    username: "admin",
+    password: "123456789A@",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Auto fetch local IP
-  // useEffect(() => {
-  //   const fetchIP = async () => {
-  //     try {
-  //       const localIp: string = await invoke("get_local_ip");
-  //       setForm(prev => ({ ...prev, ip: localIp }));
-  //       setIpFetched(true);
-  //     } catch {
-  //       console.warn("Failed to get local IP");
-  //       setIpFetched(false);
-  //     }
-  //   };
-  //   fetchIP();
-  // }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    setError(""); // clear error on input
+    setError("");
   };
 
   const handleConnect = async () => {
@@ -47,16 +56,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError("");
 
     try {
-      console.log(form);
-      const result: boolean = await invoke("connect_device", {
+      const deviceInfo: DeviceInfo = await invoke("connect_device", {
         ip: form.ip,
         username: form.username,
         password: form.password,
       });
 
-      if (result) {
-        console.log("Results", result);
-        onLogin();
+      if (deviceInfo) {
+        console.log("Device Info:", deviceInfo);
+        onLogin(deviceInfo, {
+          ip: form.ip,
+          username: form.username,
+          password: form.password,
+        });
       } else {
         setError("Failed to connect. Check credentials.");
       }
@@ -76,7 +88,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           type="text"
           name="ip"
           placeholder="Network IP"
-          // contentEditable={ipFetched ? false : true}
           value={form.ip}
           onChange={handleChange}
           className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -100,7 +111,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           className="w-full mb-6 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
-        <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+        {error && (
+          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+        )}
 
         <button
           onClick={handleConnect}
